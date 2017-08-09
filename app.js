@@ -6,28 +6,45 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const http = require('http');
 const debug = require('debug')('node-club-express:server');
-
-const index = require('./routes/index');
-const users = require('./routes/users');
-
+const session=require('express-session');
+const passport=require('passport');//身份通行证
+const cors=require('cors');//解决跨域
+const compress=require('compression');//压缩请求
+const GitHubStrategy=require('passport-github').Strategy;//github 身份可用This module lets you authenticate using GitHub in your Node.js applications
+const _=require('lodash');//lodash 工具
+const ResponseTime=require('response-time');//记录请求的响应时间
+const MethodOverride=require('method-override');//method-override可以将GET或者POST改成其他谓词PUT,DELETE等
+const ErrorHandler=require('errorhandler');//仅用于开发环境下的错误处理
+const Url=require('url');//URL 处理工具
+const helmet=require('helmet');//Helmet helps you secure your Express apps by setting various HTTP headers
+//
 const app = express();
 
-// view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+app.enable('trust proxy');
 
-// uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use('/public',express.static(path.join(__dirname, 'public')));
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(ResponseTime());
+app.use(helmet.frameguard('sameorigin'));
+app.use(MethodOverride());
+app.use(compress());
+app.use(session({
+  secret:'12345',
+  store:null,
+  resave:false,
+  saveUninitialized:false,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+//app.use('/', index);
+//app.use('/users', users);
 
-app.use('/', index);
-app.use('/users', users);
-
-// catch 404 and forward to error handler
 app.use(function (req, res, next) {
   let err = new Error('Not Found');
   err.status = 404;
@@ -36,11 +53,8 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
   res.render('error');
 });
@@ -74,6 +88,7 @@ class NodeClubServer {
 
 const port = process.env.NODE_PORT || 3300;
 
+//start server
 NodeClubServer.start(app, port).then((server) => {
 
   let address = server.address();
